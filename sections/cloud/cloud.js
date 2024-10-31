@@ -261,7 +261,7 @@ function render() {
 	if (!chrono.paused) {
 		chrono.time += dT;
 		// Do not let frame get too large
-		chrono.frame = ++chrono.frame % 1024;
+		chrono.frame = ++chrono.frame % 1e5;
 	}
 	chrono.lastFrame = chrono.thisFrame;
 

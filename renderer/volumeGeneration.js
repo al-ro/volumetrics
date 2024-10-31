@@ -75,9 +75,9 @@ function setTile(data, dimensions, coordinates, tileData) {
 
 	// The global index in the dense data where the given tile's first element goes
 	let idx =
-		coordinates[2] * dimensions[0] * 8 * dimensions[1] * 8 * 8 +		// Z-slices
-		coordinates[1] * 8 * dimensions[0] * 8 +												// Rows
-		coordinates[0] * 8;																							// Elements
+		coordinates[2] * dimensions[0] * 8 * dimensions[1] * 8 * 8 +
+		coordinates[1] * 8 * dimensions[0] * 8 +
+		coordinates[0] * 8;
 
 	// z-slices of the tile
 	for (let z = 0; z < 8; z++) {
@@ -225,7 +225,6 @@ function getVDBData(path) {
 	});
 
 	return vdbTexture;
-
 }
 
 /*
