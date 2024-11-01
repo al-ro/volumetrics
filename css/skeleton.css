@@ -92,7 +92,7 @@
 	}
 
 	.four.columns {
-		width: 30%;
+		width: 32.3%;
 	}
 
 	.five.columns {
@@ -126,6 +126,7 @@
 	.twelve.columns {
 		width: 100%;
 		margin-left: 0;
+		margin-right: 0;
 	}
 
 	.one-third.column {
