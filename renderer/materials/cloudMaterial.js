@@ -68,6 +68,9 @@ export class CloudMaterial extends Material {
 	sigmaE = [1, 1, 1];
 	sigmaEHandle;
 
+	emissionStrength = 0.0;
+	emissionStrengthHandle;
+
 	densityMultiplier = 64;
 	densityMultiplierHandle;
 
@@ -153,6 +156,8 @@ export class CloudMaterial extends Material {
 
 		this.densityMultiplierHandle = this.program.getOptionalUniformLocation('densityMultiplier');
 
+		this.emissionStrengthHandle = this.program.getOptionalUniformLocation('emissionStrength');
+
 		this.detailSizeHandle = this.program.getOptionalUniformLocation('detailSize');
 		this.detailStrengthHandle = this.program.getOptionalUniformLocation('detailStrength');
 	}
@@ -232,6 +237,9 @@ export class CloudMaterial extends Material {
 
 		if (this.densityMultiplierHandle != null) {
 			gl.uniform1f(this.densityMultiplierHandle, this.densityMultiplier);
+		}
+		if (this.emissionStrengthHandle != null) {
+			gl.uniform1f(this.emissionStrengthHandle, this.emissionStrength);
 		}
 	}
 

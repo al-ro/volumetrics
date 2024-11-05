@@ -214,8 +214,9 @@ sunFolder.close();
 
 const cloudFolder = uniformFolder.addFolder("Cloud");
 cloudFolder.add(cloudMaterial, 'densityMultiplier', 0, 512, 0.5).name("Density");
-cloudFolder.add(cloudMaterial, 'detailSize', 0, 3, 0.01).name("Detail Size");
-cloudFolder.add(cloudMaterial, 'detailStrength', 0, 1, 0.01).name("Detail Strength");
+cloudFolder.add(cloudMaterial, 'emissionStrength', 0, 1, 0.01).name("Emission strength");
+cloudFolder.add(cloudMaterial, 'detailSize', 0, 3, 0.01).name("Detail size");
+cloudFolder.add(cloudMaterial, 'detailStrength', 0, 1, 0.01).name("Detail strength");
 
 function setSigmaE() {
 	for (let i = 0; i < 3; i++) {

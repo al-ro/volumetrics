@@ -50,6 +50,8 @@ uniform vec3 sunColor;
 // [0, unbounded]
 uniform float sunStrength;
 
+uniform float emissionStrength;
+
 layout(std140) uniform cameraMatrices {
 	mat4 viewMatrix;
 	mat4 projectionMatrix;
@@ -103,6 +105,14 @@ vec3 ACESFilm(vec3 x) {
 // https://www.shadertoy.com/view/3s3GDn
 float getGlow(float dist, float radius, float intensity) {
 	return pow(radius / max(dist, 1e-6), intensity);
+}
+
+// https://www.shadertoy.com/view/4djSRW
+float hash12(vec2 p) {
+	p *= 129.5;
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
 }
 
 // -------------------- AABB Intersection --------------------- //

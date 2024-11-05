@@ -35,7 +35,7 @@ uniform vec3 dataAspect;
 uniform vec3 sigmaS;
 // Absorption coefficients
 uniform vec3 sigmaA;
-// Extinction coefficents, sigmaS + sigmaA
+// Extinction coefficients, sigmaS + sigmaA
 uniform vec3 sigmaE;
 
 // [0, unbounded]
@@ -49,6 +49,8 @@ uniform vec3 sunDirection;
 uniform vec3 sunColor;
 // [0, unbounded]
 uniform float sunStrength;
+
+uniform float emissionStrength;
 
 layout(std140) uniform cameraMatrices {
 	mat4 viewMatrix;
@@ -108,6 +110,14 @@ float getGlow(float dist, float radius, float intensity) {
 vec3 getSkyColor(vec3 rayDir) {
 	const vec3 skyColor = 0.7 * vec3(0.09, 0.33, 0.81);
 	return mix(skyColor, 0.25 * skyColor, 0.5 + 0.5 * rayDir.y);
+}
+
+// https://www.shadertoy.com/view/4djSRW
+float hash12(vec2 p) {
+	p *= 129.5;
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
 }
 
 // -------------------- AABB Intersection --------------------- //
@@ -176,7 +186,7 @@ float getDensityData(vec3 p) {
 
 // ------------------------ Main Code ------------------------- //
 
-float getDensity(vec3 p, bool sampleNoise) {
+float getDensity(vec3 p) {
 
 	// No substance outside the AABB
 	if(!insideAABB(p)) {
@@ -213,9 +223,9 @@ float HenyeyGreenstein(float g, float costh) {
 
 // https://fpsunflower.github.io/ckulla/data/oz_volumes.pdf
 // https://twitter.com/FewesW/status/1364629939568451587/photo/1
-vec3 multipleOctaves(float extinction, float mu, float stepL) {
+vec3 multipleOctaves(float density, float cosTheta) {
 
-	vec3 luminance = vec3(0);
+	vec3 radiance = vec3(0);
 
 	// Attenuation
 	float a = 1.0;
@@ -224,23 +234,21 @@ vec3 multipleOctaves(float extinction, float mu, float stepL) {
 	// Phase attenuation
 	float c = 1.0;
 
-	float phase;
-
 	for(int i = 0; i < 4; i++) {
 		// Two-lobed HG
-		phase = mix(HenyeyGreenstein(-0.1 * c, mu), HenyeyGreenstein(0.3 * c, mu), 0.7);
-		luminance += b * phase * exp(-stepL * extinction * sigmaE * a);
+		float phase = mix(HenyeyGreenstein(-0.1 * c, cosTheta), HenyeyGreenstein(0.3 * c, cosTheta), 0.7);
+		radiance += b * phase * exp(-sigmaE * density * a);
 		// Lower is brighter
 		a *= 0.2;
 		// Higher is brighter
 		b *= 0.5;
 		c *= 0.5;
 	}
-	return luminance;
+	return radiance;
 }
 
 // Get the amount of light that reaches a sample point
-vec3 lightRay(vec3 org, vec3 p, float mu, vec3 sunDirection) {
+vec3 lightRay(vec3 org, vec3 p, float cosTheta) {
 
 	float lightRayDistance = 1.0;
 	float distToStart = 0.0;
@@ -255,25 +263,19 @@ vec3 lightRay(vec3 org, vec3 p, float mu, vec3 sunDirection) {
 
 	// Collect total density along light ray
 	for(int j = 0; j < STEPS_LIGHT; j++) {
-
-		bool sampleDetail = true;
-		if(lightRayDensity > 0.3) {
-			sampleDetail = false;
-		}
-
-		vec3 samplePoint = p + sunDirection * float(j) * stepL;
-
-		lightRayDensity += getDensity(samplePoint, sampleDetail);
+		lightRayDensity += getDensity(p + sunDirection * float(j) * stepL);
 	}
 
-	vec3 beersLaw = multipleOctaves(lightRayDensity, mu, stepL);
+	lightRayDensity *= stepL;
+
+	vec3 beersLaw = multipleOctaves(lightRayDensity, cosTheta);
 
 	// Return product of Beer's law and powder effect depending on the view direction angle with the light direction
-	return mix(beersLaw * 2.0 * (1.0 - (exp(-stepL * lightRayDensity * 2.0 * sigmaE))), beersLaw, 0.5 + 0.5 * mu);
+	return mix(beersLaw * 2.0 * (1.0 - (exp(-lightRayDensity * 2.0 * sigmaE))), beersLaw, 0.5 + 0.5 * cosTheta);
 }
 
 // Get the color along the main view ray
-vec3 mainRay(vec3 org, vec3 dir, vec3 sunDirection, inout vec3 totalTransmittance, float mu, float offset) {
+vec3 mainRay(vec3 org, vec3 dir, float cosTheta, inout vec3 totalTransmittance, float offset) {
 
 	// Default to black.
 	vec3 color = vec3(0.0);
@@ -301,14 +303,14 @@ vec3 mainRay(vec3 org, vec3 dir, vec3 sunDirection, inout vec3 totalTransmittanc
 	vec3 p = org + distToStart * dir;
 
 	// Combine backward and forward scattering to have details in all directions
-	float phaseFunction = mix(HenyeyGreenstein(-0.3, mu), HenyeyGreenstein(0.3, mu), 0.7);
+	float phaseFunction = mix(HenyeyGreenstein(-0.3, cosTheta), HenyeyGreenstein(0.3, cosTheta), 0.7);
 
-	vec3 sunLight = sunStrength * sunColor * phaseFunction;
+	vec3 sunLight = sunStrength * sunColor;
 
 	for(int i = 0; i < STEPS_PRIMARY; i++) {
 
 		// Get density and cloud height at sample point
-		float density = getDensity(p, true);
+		float density = getDensity(p);
 
 		// If there is a cloud at the sample point
 		if(density > 0.0) {
@@ -316,21 +318,21 @@ vec3 mainRay(vec3 org, vec3 dir, vec3 sunDirection, inout vec3 totalTransmittanc
 			vec3 sampleSigmaS = sigmaS * density;
 			vec3 sampleSigmaE = sigmaE * density;
 
-			vec3 ambient = 0.0 * sunColor;
+			vec3 ambient = 0.0 * sunLight;
 
 			// Distance to the source position
-			float prox = length(p - vec3(0.0, -0.15, 0.0));
+			float prox = length(p - vec3(0, -0.15, 0));
 			// Vary size for flicker
 			float size = 0.2 * (sin(4.0 * fract(time)) + 1.0);
 			// Get distance based glow
-			vec3 internal = 0.0 * getGlow(prox, size, 3.2) * vec3(0.1, 0.35, 1);
+			vec3 emission = emissionStrength * vec3(0.1, 0.35, 1) * getGlow(prox, size, 3.2);
 
-			// Amount of sunlight that reaches the sample point through the cloud 
+			// Amount of light that reaches the sample point through the cloud 
 			// is the combination of ambient light and attenuated direct light
-			vec3 luminance = internal + ambient + sunLight * lightRay(org, p, mu, sunDirection);
+			vec3 radiance = emission + ambient + sunLight * phaseFunction * lightRay(org, p, cosTheta);
 
 			// Scale light contribution by density of the cloud
-			luminance *= sampleSigmaS;
+			radiance *= sampleSigmaS;
 
 			// Beer-Lambert
 			vec3 transmittance = exp(-sampleSigmaE * stepS);
@@ -338,7 +340,7 @@ vec3 mainRay(vec3 org, vec3 dir, vec3 sunDirection, inout vec3 totalTransmittanc
 			// Better energy conserving integration
 			// "From Physically based sky, atmosphere and cloud rendering in Frostbite" 5.6
 			// by Sebastian Hillaire
-			color += totalTransmittance * (luminance - luminance * transmittance) / sampleSigmaE; 
+			color += totalTransmittance * (radiance - radiance * transmittance) / sampleSigmaE; 
 
 			// Attenuate the amount of light that reaches the camera
 			totalTransmittance *= transmittance;  
@@ -374,10 +376,10 @@ void main() {
 	}
 
 	// Alignment of the view ray and light
-	float mu = dot(rayDir, sunDirection);
+	float cosTheta = dot(rayDir, sunDirection);
 
 	// Add a glow to visualize the light source
-	background += sunColor * getGlow(1.0 - (0.5 + 0.5 * mu), 1.5e-4, 0.9);
+	background += sunColor * getGlow(1.0 - (0.5 + 0.5 * cosTheta), 1.5e-4, 0.9);
 
 	// Variable to track transmittance along view ray
 	// Assume clear sky and attenuate light when encountering clouds
@@ -387,12 +389,12 @@ void main() {
 	float offset = 0.0;
 
 	if(dithering > 0) {
-		float blueNoise = texture(blueNoiseTexture, gl_FragCoord.xy / 1024.0).r;
+		float blueNoise = texture(blueNoiseTexture, gl_FragCoord.xy / 1024.0, 0.0).r;
 		// Make blue noise low discrepancy in time
 		offset = fract(blueNoise + float(frame % 256) * GOLDEN_RATIO);
 	}
 
-	vec3 col = mainRay(cameraPosition, rayDir, sunDirection, totalTransmittance, mu, offset);
+	vec3 col = mainRay(cameraPosition, rayDir, cosTheta, totalTransmittance, offset);
 
 	// Alpha blending of the cloud and background based on the total transmittance
 	col += background * totalTransmittance;
