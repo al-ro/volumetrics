@@ -20,7 +20,7 @@ class ProgramRepository {
 	*/
 	getProgram(material, geometry, attributes) {
 
-		const definePrefix = getDefinePrefix(material, geometry, attributes);
+		const definePrefix = getDefinePrefix(material, attributes);
 
 		if (this.programs.has(definePrefix)) {
 			return this.programs.get(definePrefix);

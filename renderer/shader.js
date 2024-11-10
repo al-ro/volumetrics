@@ -4,11 +4,10 @@ import { gl } from "./canvas.js"
  * Generate hash defines to toggle specific parts of shaders according to
  * geometry and material data
  * @param {Material} material Material object
- * @param {Geometry} geometry Geometry object
  * @param {string[]} attributes array of vertex attribute names
  * @returns prefix for shader string
  */
-function getDefinePrefix(material, geometry, attributes) {
+function getDefinePrefix(material, attributes) {
 
 	var prefix = "#version 300 es \n// " + material.constructor.name + " \n";
 

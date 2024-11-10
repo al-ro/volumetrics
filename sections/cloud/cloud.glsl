@@ -67,19 +67,10 @@ layout(std140) uniform cameraUniforms {
 // -------------------- Utility functions --------------------- //
 
 // Generate a ray for each fragment looking in the negative Z direction
-vec3 rayDirection(float fieldOfView) {
+vec3 rayDirection() {
 	vec2 xy = gl_FragCoord.xy - 0.5 * resolution.xy;
-	float z = (0.5 * resolution.y) / tan(0.5 * fieldOfView);
+	float z = (0.5 * resolution.y) / tan(0.5 * cameraFOV);
 	return normalize(vec3(xy, -z));
-}
-
-// https://www.geertarien.com/blog/2017/07/30/breakdown-of-the-lookAt-function-in-OpenGL/
-mat3 lookAt(vec3 camera, vec3 targetDir, vec3 up) {
-	vec3 zaxis = normalize(targetDir);
-	vec3 xaxis = normalize(cross(zaxis, up));
-	vec3 yaxis = cross(xaxis, zaxis);
-
-	return mat3(xaxis, yaxis, -zaxis);
 }
 
 vec3 gamma(vec3 col) {

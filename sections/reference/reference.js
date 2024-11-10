@@ -41,7 +41,7 @@ let rabbitTextureSize = 128;
 let rabbitTexture = Renderer.renderTo3DTexture(rabbitTextureSize, DensityMaterial);
 
 // https://github.com/Calinou/free-blue-noise-textures
-let blueNoiseTexture = Renderer.loadTexture({ url: "../../noiseTextures/bluenoise_1024.png", type: gl.RGBA });
+let blueNoiseTexture = Renderer.loadTexture({ url: "../../noiseTextures/blueNoise_1024.png", type: gl.RGBA });
 cloudMaterial.blueNoiseTexture = blueNoiseTexture;
 
 // ------------------- Time and Diagnostics ------------------- //
