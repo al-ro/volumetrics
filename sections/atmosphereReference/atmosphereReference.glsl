@@ -6,9 +6,8 @@
 
 // "A Scalable and Production Ready Sky and Atmosphere Rendering Technique"
 // With single scattering and low step count, a higher ozone coefficient look better
-
 const vec3 rayleigh = vec3(5.802, 13.558, 33.1) * 1e-6;
-const vec3 ozone = vec3(3.426, 8.298, 0.356) * 0.06 * 1e-5;
+const vec3 ozone = vec3(0.650, 1.881, 0.085) * 3e-6;
 
 const vec3 sigmaS = rayleigh;
 const vec3 sigmaT = rayleigh + ozone;
@@ -85,21 +84,14 @@ float getLightRayDensity(vec3 org) {
 
 	// Total  optical depth for light ray
 	float densityLight = 0.0;
-	float dist = 0.0;
 
 	// Travel from sample point towards the light, stopping at where it enters the atmosphere
 	for(int j = 0; j < STEPS_LIGHT; j++) {
-
-		// Get position along ray. This is the middle point of the current light segment
-		vec3 samplePointLight = org + sunDirection * dist;
-
 		// Get height of point above surface
-		float heightLight = max(0.0, length(samplePointLight) - planetRadius);
+		float heightLight = max(0.0, length(org + sunDirection * float(j) * stepL) - planetRadius);
 
 		// Add density at point to light total
 		densityLight += exp(-heightLight / scaleHeight);
-
-		dist += stepL;
 	}
 
 	return densityLight * stepL;
@@ -200,7 +192,7 @@ void main() {
 	// Alignment of the view ray and light
 	float cosTheta = dot(rayDir, sunDirection);
 
-	// Add a glow to visualize the light source
+	// Draw the Sun
 	background += sunStrength * sunColor * smoothstep(0.9995, 1.0, cosTheta);
 
 	vec3 cameraPos = vec3(0.0, planetRadius + 10.0 + 15000.0 * length(cameraPosition), 0.0);

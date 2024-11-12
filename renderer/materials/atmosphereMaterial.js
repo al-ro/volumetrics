@@ -17,7 +17,7 @@ export class AtmosphereMaterial extends Material {
 	environmentTextureHandle;
 	environmentTextureUnit;
 
-	sunStrength = 100.0;
+	sunStrength = 50.0;
 	sunStrengthHandle;
 
 	sunColor = [1, 1, 1];

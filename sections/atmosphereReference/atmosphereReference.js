@@ -6,7 +6,7 @@ const gl = Renderer.gl;
 // -------------------- Rendering Objects --------------------- //
 
 let camera = new Renderer.Camera(
-	Math.PI / 2.0, -2.75, 1.5, [0, 0, 0], [0, 1, 0], 60 * Math.PI / 180, gl.canvas.clientWidth / gl.canvas.clientHeight, 0.1, 100.0
+	Math.PI / 1.7, -2.15, 0.01, [0, 0, 0], [0, 1, 0], 60 * Math.PI / 180, gl.canvas.clientWidth / gl.canvas.clientHeight, 0.1, 100.0
 );
 
 let controls = new Renderer.Controls(camera);
@@ -141,6 +141,14 @@ let buttons = {
 
 	pause: () => {
 		chrono.paused = !chrono.paused;
+	},
+
+	resetEarthRadius: () => {
+		atmosphereMaterial.planetRadius = 6371e3;
+	},
+
+	resetEarthThickness: () => {
+		atmosphereMaterial.atmosphereThickness = 100e3;
 	}
 
 };
@@ -157,7 +165,7 @@ gui.add(chrono, 'time').name("Time").decimals(2).disable().listen();
 const uniformFolder = gui.addFolder("Uniforms");
 
 let sunUniforms = {
-	elevation: 0.75,
+	elevation: 1.57,
 	azimuth: 1.0
 };
 
@@ -175,6 +183,7 @@ function getSunDirection() {
 
 uniformFolder.close();
 
+uniformFolder.add(buttons, 'resetEarthRadius').name("Set to Earth Radius");
 uniformFolder.add(atmosphereMaterial, 'planetRadius', 100, 6371e4, 100).name("Planet Radius").listen();
 
 const sunFolder = uniformFolder.addFolder("Sun");
@@ -192,6 +201,7 @@ sunFolder.close();
 
 const atmosphereFolder = uniformFolder.addFolder("Atmosphere");
 
+atmosphereFolder.add(buttons, 'resetEarthThickness').name("Set to Earth Atmosphere");
 atmosphereFolder.add(atmosphereMaterial, 'atmosphereThickness', 10, 1000e3, 10).name("Thickness").listen();
 atmosphereFolder.close();
 

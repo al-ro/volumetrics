@@ -98,6 +98,12 @@ float getGlow(float dist, float radius, float intensity) {
 	return pow(radius / max(dist, 1e-6), intensity);
 }
 
+// Phase function
+// https://www.pbr-book.org/3ed-2018/Volume_Scattering/Phase_Functions
+float HenyeyGreenstein(float g, float cosTheta) {
+	return (1.0 / (4.0 * 3.1415926)) * ((1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * cosTheta, 1.5));
+}
+
 // https://www.shadertoy.com/view/4djSRW
 float hash12(vec2 p) {
 	p *= 129.5;
