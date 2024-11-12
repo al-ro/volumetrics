@@ -29,26 +29,16 @@ export class AtmosphereMaterial extends Material {
 	renderBackground = true;
 	renderBackgroundHandle;
 
-	sigmaS = [1, 1, 1];
-	sigmaSHandle;
-
-	sigmaA = [0, 0, 0];
-	sigmaAHandle;
-
-	sigmaE = [1, 1, 1];
-	sigmaEHandle;
-
 	atmosphereThickness = 100e3;
 	atmosphereThicknessHandle;
 
 	planetRadius = 6371e3;
 	planetRadiusHandle;
 
+	atmosphereRadiusHandle;
+
 	scaleHeight = 0.085;
 	scaleHeightHandle;
-
-	scaleHeightMie = 0.012;
-	scaleHeightMieHandle;
 
 	fragmentSource = /*glsl*/`
     uniform float time;
@@ -114,9 +104,9 @@ export class AtmosphereMaterial extends Material {
 		this.sunColorHandle = this.program.getOptionalUniformLocation('sunColor');
 		this.sunStrengthHandle = this.program.getOptionalUniformLocation('sunStrength');
 
-		this.sigmaSHandle = this.program.getOptionalUniformLocation('sigmaS');
-		this.sigmaAHandle = this.program.getOptionalUniformLocation('sigmaA');
-		this.sigmaEHandle = this.program.getOptionalUniformLocation('sigmaE');
+		this.scaleHeightHandle = this.program.getOptionalUniformLocation('scaleHeight');
+		this.atmosphereRadiusHandle = this.program.getOptionalUniformLocation('atmosphereRadius');
+		this.planetRadiusHandle = this.program.getOptionalUniformLocation('planetRadius');
 	}
 
 	bindUniforms() {
@@ -143,14 +133,14 @@ export class AtmosphereMaterial extends Material {
 			gl.uniform3fv(this.sunColorHandle, this.sunColor);
 		}
 
-		if (this.sigmaSHandle != null) {
-			gl.uniform3fv(this.sigmaSHandle, this.sigmaS);
+		if (this.scaleHeightHandle != null) {
+			gl.uniform1f(this.scaleHeightHandle, this.scaleHeight * this.atmosphereThickness);
 		}
-		if (this.sigmaAHandle != null) {
-			gl.uniform3fv(this.sigmaAHandle, this.sigmaA);
+		if (this.planetRadiusHandle != null) {
+			gl.uniform1f(this.planetRadiusHandle, this.planetRadius);
 		}
-		if (this.sigmaEHandle != null) {
-			gl.uniform3fv(this.sigmaEHandle, this.sigmaE);
+		if (this.atmosphereRadiusHandle != null) {
+			gl.uniform1f(this.atmosphereRadiusHandle, this.planetRadius + this.atmosphereThickness);
 		}
 	}
 

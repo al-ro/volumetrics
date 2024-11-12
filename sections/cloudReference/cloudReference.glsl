@@ -36,7 +36,7 @@ uniform vec3 sigmaS;
 // Absorption coefficients
 uniform vec3 sigmaA;
 // Extinction coefficients, sigmaS + sigmaA
-uniform vec3 sigmaE;
+uniform vec3 sigmaT;
 
 // [0, unbounded]
 uniform float densityMultiplier;
@@ -208,8 +208,8 @@ float getDensity(vec3 p) {
 
 // Phase function
 // https://www.pbr-book.org/3ed-2018/Volume_Scattering/Phase_Functions
-float HenyeyGreenstein(float g, float costh) {
-	return (1.0 / (4.0 * 3.1415926)) * ((1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * costh, 1.5));
+float HenyeyGreenstein(float g, float cosTheta) {
+	return (1.0 / (4.0 * 3.1415926)) * ((1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * cosTheta, 1.5));
 }
 
 // https://fpsunflower.github.io/ckulla/data/oz_volumes.pdf
@@ -228,7 +228,7 @@ vec3 multipleOctaves(float density, float cosTheta) {
 	for(int i = 0; i < 4; i++) {
 		// Two-lobed HG
 		float phase = mix(HenyeyGreenstein(-0.1 * c, cosTheta), HenyeyGreenstein(0.3 * c, cosTheta), 0.7);
-		radiance += b * phase * exp(-sigmaE * density * a);
+		radiance += b * phase * exp(-sigmaT * density * a);
 		// Lower is brighter
 		a *= 0.2;
 		// Higher is brighter
@@ -262,14 +262,11 @@ vec3 lightRay(vec3 org, vec3 p, float cosTheta) {
 	vec3 beersLaw = multipleOctaves(lightRayDensity, cosTheta);
 
 	// Return product of Beer's law and powder effect depending on the view direction angle with the light direction
-	return mix(beersLaw * 2.0 * (1.0 - (exp(-lightRayDensity * 2.0 * sigmaE))), beersLaw, 0.5 + 0.5 * cosTheta);
+	return mix(beersLaw * 2.0 * (1.0 - (exp(-lightRayDensity * 2.0 * sigmaT))), beersLaw, 0.5 + 0.5 * cosTheta);
 }
 
 // Get the color along the main view ray
 vec3 mainRay(vec3 org, vec3 dir, float cosTheta, inout vec3 totalTransmittance, float offset) {
-
-	// Default to black.
-	vec3 color = vec3(0.0);
 
 	// The distance at which to start ray marching
 	float distToStart = 0.0;
@@ -281,8 +278,11 @@ vec3 mainRay(vec3 org, vec3 dir, float cosTheta, inout vec3 totalTransmittance, 
 	bool renderClouds = getAABBIntersection(org, dir, distToStart, totalDistance);
 
 	if(!renderClouds) {
-		return color;
+		return vec3(0);
 	}
+
+	// Default to black.
+	vec3 radiance = vec3(0.0);
 
 	// Sampling step size
 	float stepS = totalDistance / float(STEPS_PRIMARY); 
@@ -307,37 +307,38 @@ vec3 mainRay(vec3 org, vec3 dir, float cosTheta, inout vec3 totalTransmittance, 
 		if(density > 0.0) {
 
 			vec3 sampleSigmaS = sigmaS * density;
-			vec3 sampleSigmaE = sigmaE * density;
+			vec3 sampleSigmaT = sigmaT * density;
 
+			// Constant ambient factor
 			vec3 ambient = 0.0 * sunLight;
 
+			// Emulate lightning as a distance glow to some source
 			// Distance to the source position
-			float prox = length(p - vec3(0, -0.15, 0));
+			float dist = length(p - vec3(0, -0.15, 0));
 			// Vary size for flicker
 			float size = 0.2 * (sin(4.0 * fract(time)) + 1.0);
 			// Get distance based glow
-			vec3 emission = emissionStrength * vec3(0.1, 0.35, 1) * getGlow(prox, size, 3.2);
+			vec3 emission = emissionStrength * vec3(0.1, 0.35, 1) * getGlow(dist, size, 3.2);
 
-			// Amount of light that reaches the sample point through the cloud 
-			// is the combination of ambient light and attenuated direct light
-			vec3 radiance = emission + ambient + sunLight * phaseFunction * lightRay(org, p, cosTheta);
+			// Amount of light that reaches the sample point through the cloud is the combination of ambient light and attenuated direct light
+			vec3 inscatter = emission + ambient + sunLight * phaseFunction * lightRay(org, p, cosTheta);
 
-			// Scale light contribution by density of the cloud
-			radiance *= sampleSigmaS;
+			// Scale light contribution by scattering coefficent and density
+			inscatter *= sampleSigmaS;
 
 			// Beer-Lambert
-			vec3 transmittance = exp(-sampleSigmaE * stepS);
+			vec3 transmittance = exp(-sampleSigmaT * stepS);
 
-			// Better energy conserving integration
-			// "From Physically based sky, atmosphere and cloud rendering in Frostbite" 5.6
-			// by Sebastian Hillaire
-			color += totalTransmittance * (radiance - radiance * transmittance) / sampleSigmaE;
+			// Naïve integration (note that the earlier inscatter *= sampleSigmaS already includes sigmaS and density)
+			// radiance += totalTransmittance * inscatter * stepS; 
+
+			// Better energy conserving integration from "Physically based sky, atmosphere and cloud rendering in Frostbite" 5.6 by Sebastian Hillaire
+			radiance += totalTransmittance * (inscatter - inscatter * transmittance) / sampleSigmaT;
 
 			// Attenuate the amount of light that reaches the camera
 			totalTransmittance *= transmittance;
 
-			// If ray combined transmittance is close to 0, nothing beyond this sample 
-			// point is visible, so break early
+			// If ray combined transmittance is close to 0, nothing beyond this sample point is visible, so break early
 			if(length(totalTransmittance) <= 1e-3) {
 				totalTransmittance = vec3(0.0);
 				break;
@@ -348,7 +349,7 @@ vec3 mainRay(vec3 org, vec3 dir, float cosTheta, inout vec3 totalTransmittance, 
 		p += dir * stepS;
 	}
 
-	return color;
+	return radiance;
 }
 
 void main() {

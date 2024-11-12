@@ -1,7 +1,5 @@
 import * as Renderer from "../../renderer/renderer.js"
-import { CloudMaterial } from "../../renderer/materials/cloudMaterial.js";
-import { DensityMaterial } from "../../renderer/materials/densityMaterial.js";
-import { NoiseMaterial } from "../../renderer/materials/noiseMaterial.js";
+import { AtmosphereMaterial } from "../../renderer/materials/atmosphereMaterial.js";
 
 const gl = Renderer.gl;
 
@@ -27,22 +25,9 @@ let sceneMaterial = new Renderer.ScreenspaceMaterial(sceneTexture);
 let sceneMesh = new Renderer.Mesh({ geometry: sceneQuad, material: sceneMaterial });
 sceneMesh.cull = false;
 
-let cloudMaterial = new CloudMaterial();
-let cloudMesh = new Renderer.Mesh({ geometry: sceneQuad, material: cloudMaterial });
+let atmosphereMaterial = new AtmosphereMaterial();
+let cloudMesh = new Renderer.Mesh({ geometry: sceneQuad, material: atmosphereMaterial });
 cloudMesh.cull = false;
-
-// ------------------------- Textures ------------------------- //
-
-let noiseTextureSize = 512;
-let noiseTexture = Renderer.renderTo3DTexture(noiseTextureSize, NoiseMaterial);
-cloudMaterial.noiseTexture = noiseTexture;
-
-let rabbitTextureSize = 128;
-let rabbitTexture = Renderer.renderTo3DTexture(rabbitTextureSize, DensityMaterial);
-
-// https://github.com/Calinou/free-blue-noise-textures
-let blueNoiseTexture = Renderer.loadTexture({ url: "../../noiseTextures/bluenoise_1024.png", type: gl.RGBA });
-cloudMaterial.blueNoiseTexture = blueNoiseTexture;
 
 // ------------------- Time and Diagnostics ------------------- //
 
@@ -98,16 +83,6 @@ gui.add(controls, 'resolutionMultiplier', 0.1, 2.0, 0.1).name("Resolution multip
 	(v) => { controls.setMultiplier(v) }
 ).listen();
 
-let clouds = new Map();
-clouds.set("Stanford Rabbit", "");
-clouds.set("Disney 1/16", "../../voxelData/sixteenth8bit.bin");
-clouds.set("Disney 1/8", "../../voxelData/eighth8bit.bin");
-clouds.set("Disney 1/4", "../../voxelData/quarter8bit.bin");
-let cloudNames = Array.from(clouds.keys());
-let cloudController = { cloud: "Disney 1/4" };
-
-gui.add(cloudController, 'cloud').name("Cloud model").options(cloudNames).onChange((name) => { updateCloudData(name); });
-
 const infoFolder = gui.addFolder('Info');
 infoFolder.add(info, 'memory').name("Memory used").disable().listen();
 /*
@@ -125,7 +100,7 @@ environments.set("Uffizi Gallery", "../../environmentMaps/uffizi_probe_1k.hdr");
 environments.set("Stars", "../../environmentMaps/starmap_2020_1k.hdr");
 let environmentNames = Array.from(environments.keys());
 environmentNames.sort();
-let environmentController = { environment: "San Giuseppe Bridge" };
+let environmentController = { environment: "Stars" };
 
 environment = new Renderer.Environment({ path: environments.get(environmentController.environment), type: "hdr", camera: camera });
 
@@ -133,25 +108,25 @@ const environmentFolder = gui.addFolder('Environment');
 environmentFolder.add(environmentController, 'environment').name("Environment map").options(environmentNames).onChange(
 	(name) => { environment.setHDR(environments.get(name)); }
 );
-environmentFolder.add(cloudMaterial, 'renderBackground').name("Render background");
+environmentFolder.add(atmosphereMaterial, 'renderBackground').name("Render background");
 environmentFolder.close();
 
 const cameraFolder = gui.addFolder('Camera');
 let fov = { value: camera.fov * 180 / Math.PI };
 cameraFolder.add(fov, 'value', 10, 180, 1).name("FOV").decimals(0).listen().onChange((value) => { camera.fov = value * Math.PI / 180; });
 cameraFolder.add(camera, 'exposure', 0, 2, 0.01).name("Exposure");
-cameraFolder.add(camera, 'distance').name("Camera distance").decimals(2).disable().listen();
+cameraFolder.add(camera, 'distance', 0.01, 500, 0.01).name("Camera distance").decimals(2).listen().onChange((value) => { camera.updateDistance(value); });
 cameraFolder.close();
 
 //gui.close();
 
 let buttons = {
 	updateMaterial: () => {
-		Renderer.download("cloud.glsl", "text").then((shaderSource) => {
-			cloudMaterial.program.markForDeletion();
-			cloudMaterial.program = null;
-			cloudMaterial.fragmentSource = shaderSource;
-			cloudMesh.setMaterial(cloudMaterial);
+		Renderer.download("atmosphereReference.glsl", "text").then((shaderSource) => {
+			atmosphereMaterial.program.markForDeletion();
+			atmosphereMaterial.program = null;
+			atmosphereMaterial.fragmentSource = shaderSource;
+			cloudMesh.setMaterial(atmosphereMaterial);
 		});
 	},
 
@@ -186,7 +161,7 @@ let sunUniforms = {
 	azimuth: 1.0
 };
 
-cloudMaterial.sunDirection = getSunDirection();
+atmosphereMaterial.sunDirection = getSunDirection();
 
 function getSunDirection() {
 	let dir = [
@@ -198,50 +173,27 @@ function getSunDirection() {
 	return normalize(dir);
 }
 
-uniformFolder.add(cloudMaterial, 'dithering');
 uniformFolder.close();
+
+uniformFolder.add(atmosphereMaterial, 'planetRadius', 100, 6371e4, 100).name("Planet Radius").listen();
 
 const sunFolder = uniformFolder.addFolder("Sun");
 sunFolder.add(sunUniforms, 'elevation', 0.0, Math.PI - 1e-4, 0.01).name("Elevation").onChange(
-	() => { cloudMaterial.sunDirection = getSunDirection(); }
+	() => { atmosphereMaterial.sunDirection = getSunDirection(); }
 );
 sunFolder.add(sunUniforms, 'azimuth', 0, 2.0 * Math.PI - 1e-4, 0.01).name("Azimuth").onChange(
-	() => { cloudMaterial.sunDirection = getSunDirection(); }
+	() => { atmosphereMaterial.sunDirection = getSunDirection(); }
 );
-sunFolder.add(cloudMaterial, 'sunStrength', 0, 200, 1).name("Strength");
-sunFolder.addColor(cloudMaterial, 'sunColor').name("Color");
+
+atmosphereMaterial.sunStrength = 50.0;
+sunFolder.add(atmosphereMaterial, 'sunStrength', 0, 200, 1).name("Strength");
+sunFolder.addColor(atmosphereMaterial, 'sunColor').name("Color");
 sunFolder.close();
 
-const cloudFolder = uniformFolder.addFolder("Cloud");
-cloudFolder.add(cloudMaterial, 'densityMultiplier', 0, 512, 0.5).name("Density");
-cloudFolder.add(cloudMaterial, 'emissionStrength', 0, 1, 0.01).name("Emission strength");
-cloudFolder.add(cloudMaterial, 'detailSize', 0, 3, 0.01).name("Detail size");
-cloudFolder.add(cloudMaterial, 'detailStrength', 0, 1, 0.01).name("Detail strength");
+const atmosphereFolder = uniformFolder.addFolder("Atmosphere");
 
-function setSigmaT() {
-	for (let i = 0; i < 3; i++) {
-		cloudMaterial.sigmaT[i] = Math.max(1e-6, cloudMaterial.sigmaS[i] + cloudMaterial.sigmaA[i]);
-	}
-}
-cloudFolder.addColor(cloudMaterial, 'sigmaS').name("&#963;<sub>S</sub>").onChange((v) => { cloudMaterial.sigmaS = v; setSigmaT(); });
-cloudFolder.addColor(cloudMaterial, 'sigmaA').name("&#963;<sub>A</sub>").onChange((v) => { cloudMaterial.sigmaA = v; setSigmaT(); });
-cloudFolder.close();
-
-function updateCloudData(name) {
-
-	switch (name) {
-		case "Stanford Rabbit":
-			cloudMaterial.densityTexture = rabbitTexture;
-			cloudMaterial.dataAspect = [1, 1, 1];
-			cloudMaterial.aabbScale = [1, 1, 1];
-			break;
-		default:
-			cloudMaterial.densityTexture = Renderer.getVDBData(clouds.get(name));
-			cloudMaterial.dataAspect = [1.25, 1.8181, 1.0];
-			cloudMaterial.aabbScale = [0.8, 0.55, 1.0];
-	}
-}
-updateCloudData(cloudController.cloud);
+atmosphereFolder.add(atmosphereMaterial, 'atmosphereThickness', 10, 1000e3, 10).name("Thickness").listen();
+atmosphereFolder.close();
 
 // ------------------------ Rendering ------------------------- //
 

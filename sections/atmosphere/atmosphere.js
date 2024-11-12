@@ -190,13 +190,6 @@ sunFolder.close();
 
 const atmosphereFolder = uniformFolder.addFolder("Atmosphere");
 
-function setSigmaE() {
-	for (let i = 0; i < 3; i++) {
-		atmosphereMaterial.sigmaE[i] = Math.max(1e-6, atmosphereMaterial.sigmaS[i] + atmosphereMaterial.sigmaA[i]);
-	}
-}
-atmosphereFolder.addColor(atmosphereMaterial, 'sigmaS').name("&#963;<sub>S</sub>").onChange((v) => { atmosphereMaterial.sigmaS = v; setSigmaE(); });
-atmosphereFolder.addColor(atmosphereMaterial, 'sigmaA').name("&#963;<sub>A</sub>").onChange((v) => { atmosphereMaterial.sigmaA = v; setSigmaE(); });
 atmosphereFolder.close();
 
 // ------------------------ Rendering ------------------------- //

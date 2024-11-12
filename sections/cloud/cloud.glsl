@@ -36,7 +36,7 @@ uniform vec3 sigmaS;
 // Absorption coefficients
 uniform vec3 sigmaA;
 // Extinction coefficients, sigmaS + sigmaA
-uniform vec3 sigmaE;
+uniform vec3 sigmaT;
 
 // [0, unbounded]
 uniform float densityMultiplier;

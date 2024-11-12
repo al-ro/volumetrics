@@ -147,7 +147,7 @@ cameraFolder.close();
 
 let buttons = {
 	updateMaterial: () => {
-		Renderer.download("reference.glsl", "text").then((shaderSource) => {
+		Renderer.download("cloudReference.glsl", "text").then((shaderSource) => {
 			cloudMaterial.program.markForDeletion();
 			cloudMaterial.program = null;
 			cloudMaterial.fragmentSource = shaderSource;
@@ -218,13 +218,13 @@ cloudFolder.add(cloudMaterial, 'emissionStrength', 0, 1, 0.01).name("Emission st
 cloudFolder.add(cloudMaterial, 'detailSize', 0, 3, 0.01).name("Detail size");
 cloudFolder.add(cloudMaterial, 'detailStrength', 0, 1, 0.01).name("Detail strength");
 
-function setSigmaE() {
+function setSigmaT() {
 	for (let i = 0; i < 3; i++) {
-		cloudMaterial.sigmaE[i] = Math.max(1e-6, cloudMaterial.sigmaS[i] + cloudMaterial.sigmaA[i]);
+		cloudMaterial.sigmaT[i] = Math.max(1e-6, cloudMaterial.sigmaS[i] + cloudMaterial.sigmaA[i]);
 	}
 }
-cloudFolder.addColor(cloudMaterial, 'sigmaS').name("&#963;<sub>S</sub>").onChange((v) => { cloudMaterial.sigmaS = v; setSigmaE(); });
-cloudFolder.addColor(cloudMaterial, 'sigmaA').name("&#963;<sub>A</sub>").onChange((v) => { cloudMaterial.sigmaA = v; setSigmaE(); });
+cloudFolder.addColor(cloudMaterial, 'sigmaS').name("&#963;<sub>S</sub>").onChange((v) => { cloudMaterial.sigmaS = v; setSigmaT(); });
+cloudFolder.addColor(cloudMaterial, 'sigmaA').name("&#963;<sub>A</sub>").onChange((v) => { cloudMaterial.sigmaA = v; setSigmaT(); });
 cloudFolder.close();
 
 function updateCloudData(name) {
