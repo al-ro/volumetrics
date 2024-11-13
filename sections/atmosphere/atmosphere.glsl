@@ -63,6 +63,11 @@ vec3 ACESFilm(vec3 x) {
 	return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
 }
 
+// Rayleigh phase function
+float Rayleigh(float cosTheta) {
+	return (3.0 / (16.0 * 3.1415926)) * (1.0 + cosTheta * cosTheta);
+}
+
 // Return the near and far intersections of an infinite ray and a sphere. 
 // Assumes sphere at origin. No intersection if result.x > result.y
 vec2 sphereIntersect(vec3 start, vec3 dir, float radius) {
