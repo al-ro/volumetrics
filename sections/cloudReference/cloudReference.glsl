@@ -341,7 +341,7 @@ vec3 mainRay(vec3 org, vec3 dir, float cosTheta, inout vec3 totalTransmittance, 
 			// If ray combined transmittance is close to 0, nothing beyond this sample point is visible, so break early
 			if(length(totalTransmittance) <= 1e-3) {
 				totalTransmittance = vec3(0.0);
-				break;
+				return radiance;
 			}
 		}
 
