@@ -4,6 +4,8 @@
 
 This repository forms the basis of the "Basic Volumetric Rendering" workshop at the [Graphics Programming Conference](https://www.graphicsprogrammingconference.nl/) held in Breda, 2024.
 
+[Live version](https://al-ro.github.io/projects/cloud/)
+
 ## Requirements
 
 - A browser which supports WebGL2 (e.g. Chrome, Firefox)
