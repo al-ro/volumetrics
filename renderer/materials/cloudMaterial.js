@@ -37,6 +37,7 @@ export class CloudMaterial extends Material {
 
 	detailStrength = 0.0;
 	detailStrengthHandle;
+	carve = false;
 
 	sunStrength = 100.0;
 	sunHandle;
@@ -232,7 +233,7 @@ export class CloudMaterial extends Material {
 			gl.uniform1f(this.detailSizeHandle, this.detailSize);
 		}
 		if (this.detailStrengthHandle != null) {
-			gl.uniform1f(this.detailStrengthHandle, this.detailStrength);
+			gl.uniform1f(this.detailStrengthHandle, this.carve ? this.detailStrength : 0.0);
 		}
 
 		if (this.densityMultiplierHandle != null) {
